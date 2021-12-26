@@ -121,6 +121,7 @@ void add_root(gc_state_t state, gc_node_t node) {
 
 // This is like all of the work
 void find_roots(gc_state_t state) {
+    find_register_roots(state);
 #ifdef DEBUG
     fprintf(stdout, "Pointers present\n");
     for (int i = 0; i < state->pointers->capacity; i++) {

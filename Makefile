@@ -1,17 +1,21 @@
 CC = gcc
 CFLAGS = -lm -Wall -Wshadow -g -O0 # -fsanitize=address
 
-tests: lib src/tests.c long_table
-	$(CC) -o target/tests src/tests.c target/gc.o target/long_table.o $(CFLAGS)
+target/tests: target/gc.a src/tests.c
+	$(CC) -o target/tests src/tests.c target/gc.a $(CFLAGS)
 
-lib: long_table src/gc.c src/gc.h
-	$(CC) -c -o target/gc.o src/gc.c target/long_table.o $(CFLAGS)
+target/gc.a: target/long_table.o target/gc.o target/reg_roots.o
+	mkdir -p target
+	ar -rc target/gc.a target/gc.o target/long_table.o target/reg_roots.o
 
-long_table: src/long_table.c src/long_table.h target
+target/gc.o: src/gc.c src/gc.h
+	$(CC) -c -o target/gc.o src/gc.c $(CFLAGS)
+
+target/reg_roots.o: src/reg_roots.s
+	$(CC) -o target/reg_roots.o -c src/reg_roots.s $(CFLAGS)
+
+target/long_table.o: src/long_table.c src/long_table.h
 	$(CC) -c src/long_table.c -o target/long_table.o $(CFLAGS)
 
-target:
-	mkdir target
-
 clean:
-	rm -rf target
+	rm -rf target/*

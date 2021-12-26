@@ -35,6 +35,8 @@ typedef struct GcState {
     int bytes_limit;
 } *gc_state_t;
 
+extern void find_register_roots(gc_state_t state);
+
 void trace(gc_state_t state, void *val);
 
 void find_roots(gc_state_t state);
