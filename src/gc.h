@@ -55,7 +55,11 @@ void find_roots(gc_state_t state);
 
 void print_roots(gc_state_t state);
 
+void print_node(gc_node_t node);
+
 void *register_gc_data(gc_state_t state, void *data, int num_bytes,
                       void (*fre)(void *), void (*trac)(void *));
+
+void print_present_pointers(gc_state_t state);
 
 #endif

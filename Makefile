@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -lm -Wall -Wshadow -g -O3 # -fsanitize=address
+CFLAGS = -lm -Wall -Wshadow -g -O0 # -fsanitize=address
 
 target/tests: target/gc.a src/tests.c
 	$(CC) -o target/tests src/tests.c target/gc.a $(CFLAGS)

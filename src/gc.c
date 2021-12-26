@@ -31,13 +31,22 @@ void trace(gc_state_t state, void *val) {
 }
 
 void collect_garbage(gc_state_t state) {
+//#ifndef DEBUG
     if (state->bytes_allocated < state->bytes_limit)
         return;
+//#endif
 
-    // Find roots
     find_roots(state);
 
+#ifdef DEBUG
+    print_roots(state);
+#endif
+
+
     for (int i = 0; i < state->roots_size; i++) {
+#ifdef DEBUG
+        fprintf(stderr, "Tracing root %p\n", state->roots[i]->val);
+#endif
         trace(state, state->roots[i]->val);     
     }
 
@@ -48,6 +57,9 @@ void collect_garbage(gc_state_t state) {
         if ((box = table->boxes[i])) {
             gc_node_t n = box->val;
             if (n->flags & NOT_SEEN) {
+#ifdef DEBUG
+                fprintf(stderr, "Freeing %p\n", n->val);
+#endif
                 // Free the node and remove from linked list
                 if (n->free) {
                     freed_bytes += n->num_bytes;
@@ -101,13 +113,23 @@ gc_state_t new_gc_state() {
     return res;
 }
 
+void print_node(gc_node_t node) {
+    fprintf(stderr, "val: %p, num_bytes: %d\n", node->val, node->num_bytes);
+}
+
 gc_node_t new_node(void *val, int num_bytes, void (*fre)(void *), void (*trac)(void *)) {
     gc_node_t res = malloc(sizeof *res);
-    res->flags = NOT_SEEN;
+
+    res->val = val;
     res->num_bytes = num_bytes;
     res->free = fre;
     res->trace = trac;
-    res->val = val;
+
+    res->flags = NOT_SEEN;
+#ifdef DEBUG
+    fprintf(stderr, "Allocated node: ");
+    print_node(res);
+#endif
     return res;
 }
 
@@ -119,10 +141,7 @@ void add_root(gc_state_t state, gc_node_t node) {
     state->roots[state->roots_size++] = node;
 }
 
-// This is like all of the work
-void find_roots(gc_state_t state) {
-    find_register_roots(state);
-#ifdef DEBUG
+void print_present_pointers(gc_state_t state) {
     fprintf(stdout, "Pointers present\n");
     for (int i = 0; i < state->pointers->capacity; i++) {
         if (state->pointers->boxes[i]) {
@@ -130,6 +149,13 @@ void find_roots(gc_state_t state) {
             fprintf(stdout, "%p\n", node->val);
         }
     }
+}
+
+// This is like all of the work
+void find_roots(gc_state_t state) {
+    find_register_roots(state);
+#ifdef DEBUG
+    print_present_pointers(state);
     fprintf(stdout, "Stack: %p, Top: %p\n", stack, stack_top);
 #endif
     for (void **cp = stack; cp <= stack_top; cp++) {
@@ -137,6 +163,7 @@ void find_roots(gc_state_t state) {
         if (node) {
 #ifdef DEBUG
             fprintf(stdout, "Found %p (%p)\n", cp, *cp);
+            print_node(node);
 #endif
             add_root(state, node);
         }
@@ -149,12 +176,10 @@ void find_roots(gc_state_t state) {
 }
 
 void print_roots(gc_state_t state) {
-    find_roots(state);
     printf("num roots: %d\n", state->roots_size);
     for (int i = 0; i < state->roots_size; i++) {
         printf("%p\n", state->roots[i]->val);
     }
-    state->roots_size = 0;
 }
 
 void test(int c) {
