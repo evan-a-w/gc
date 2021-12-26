@@ -1,4 +1,4 @@
 #!/bin/sh
 
 make
-valgrind --leak-check=full --undef-value-errors=no target/gc
+valgrind --leak-check=full --undef-value-errors=no target/tests

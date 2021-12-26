@@ -3,43 +3,13 @@
 #include <assert.h>
 
 #include "long_table.h"
+#include "gc.h"
 
 #define RESET_COLOUR(flag) ((flag) & ~3)
 #define DEFAULT_BYTES_LIMIT 256
 
 register void **stack asm("rsp");
 void **stack_top;
-
-enum GC_COLOURS {
-    NOT_SEEN = 1,
-    CHILDREN_UNSEEN = 1 << 1,
-    SEEN = 1 << 2,
-};
-
-// Structure to store each garbage collected object - linked list
-typedef struct GcNode {
-    // Currently only uses GC_COLOURS but may want more flags later.
-    int flags;
-    int num_bytes;
-    // Function used to mark children as not being garbage.
-    void (*trace)(void *);
-    // Function used to free the void *val
-    // return value - number of bytes freed (for stats purposes)
-    // SHOULD NOT FREE GARBAGE COLLECTED CHILDREN
-    void (*free)(void *);
-    void *val;
-} *gc_node_t;
-
-typedef struct GcState {
-    // Linked list of nodes in existence
-    long_table_t pointers;
-    // Array of root values (on the stack)
-    gc_node_t *roots;
-    int _roots_cap;
-    int roots_size;
-    int bytes_allocated;
-    int bytes_limit;
-} *gc_state_t;
 
 // The 'trace' function passed into register should
 // recursively call the below function on all children
@@ -58,8 +28,6 @@ void trace(gc_state_t state, void *val) {
         node->flags |= SEEN;
     }
 }
-
-void find_roots(gc_state_t state);
 
 void collect_garbage(gc_state_t state) {
     if (state->bytes_allocated < state->bytes_limit)
@@ -193,52 +161,6 @@ void *register_gc_data(gc_state_t state, void *data, int num_bytes,
     gc_node_t node = new_node(data, num_bytes, fre, trac);
     long_table_add(state->pointers, (long)data, node);
     state->bytes_allocated += num_bytes;
-    return data;
-}
-
-void func1(gc_state_t state) {
-    long_table_t d1 = register_gc_data(state, long_table_new(),
-                                       sizeof(struct LongTable), long_table_free,
-                                       NULL);
-    fprintf(stdout, "Stack top is %p\n", stack_top);
-    long_table_add(d1, 1, (void *)1);
-
-    fprintf(stdout, "d1 is %p (%p) - ", &d1, d1);
-    fprintf(stdout, "is %s8 byte aligned\n",
-            (unsigned long)&d1 % 8 == 0 ? "" : "not ");
-
-    long_table_t d2 = register_gc_data(state, long_table_new(),
-                                       sizeof(struct LongTable), long_table_free,
-                                       NULL);
-    long_table_add(d2, 2, (void *)2);
-
-    fprintf(stdout, "d2 is %p (%p) - ", &d2, d2);
-    fprintf(stdout, "is %s8 byte aligned\n",
-            (unsigned long)&d2 % 8 == 0 ? "" : "not ");
-
-    find_roots(state);
-    assert(state->roots_size == 2);
-    state->roots_size = 0;
-
     collect_garbage(state);
-}
-
-void test1() {
-    gc_state_t state = new_gc_state();
-    int test = 0;
-    (void)test;
-    fprintf(stdout, "Location of tests is %p\n", &test);
-    fprintf(stdout, "Stack top is %p\n", stack_top);
-
-    func1(state);
-
-    find_roots(state);
-    assert(state->roots_size == 0);
-    state->roots_size = 0;
-
-    free_gc_state(state);
-}
-
-int main(void) {
-    test1();
+    return data;
 }
