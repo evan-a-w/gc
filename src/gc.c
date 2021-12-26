@@ -7,6 +7,7 @@
 
 #define RESET_COLOUR(flag) ((flag) & ~3)
 #define DEFAULT_BYTES_LIMIT 256
+#define DEBUG
 
 register void **stack asm("rsp");
 void **stack_top;
@@ -113,31 +114,36 @@ gc_node_t new_node(void *val, int num_bytes, void (*fre)(void *), void (*trac)(v
 void add_root(gc_state_t state, gc_node_t node) {
     if (state->roots_size == state->_roots_cap) {
         state->_roots_cap *= 2;
-        state->roots = realloc(state->roots, sizeof *state->roots * state->_roots_cap);
+        state->roots = realloc(state->roots, sizeof(*state->roots) * state->_roots_cap);
     }
     state->roots[state->roots_size++] = node;
 }
 
 // This is like all of the work
 void find_roots(gc_state_t state) {
-    {
-        fprintf(stdout, "Pointers present\n");
-        for (int i = 0; i < state->pointers->capacity; i++) {
-            if (state->pointers->boxes[i]) {
-                gc_node_t node = state->pointers->boxes[i]->val;
-                fprintf(stdout, "%p\n", node->val);
-            }
+#ifdef DEBUG
+    fprintf(stdout, "Pointers present\n");
+    for (int i = 0; i < state->pointers->capacity; i++) {
+        if (state->pointers->boxes[i]) {
+            gc_node_t node = state->pointers->boxes[i]->val;
+            fprintf(stdout, "%p\n", node->val);
         }
     }
     fprintf(stdout, "Stack: %p, Top: %p\n", stack, stack_top);
+#endif
     for (void **cp = stack; cp <= stack_top; cp++) {
         gc_node_t node = (gc_node_t)long_table_find(state->pointers, (long) *cp);
         if (node) {
+#ifdef DEBUG
             fprintf(stdout, "Found %p (%p)\n", cp, *cp);
+#endif
             add_root(state, node);
-        } else {
+        }
+#ifdef DEBUG
+        else {
             fprintf(stdout, "Failed %p (%p)\n", cp, *cp);
         }
+#endif
     }
 }
 
