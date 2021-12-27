@@ -1,11 +1,11 @@
 #ifndef LONG_TABLE_H
 #define LONG_TABLE_H
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdbool.h>
 #include <assert.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define MAX_LOAD 0.9
 #define MIN_LOAD 0.3
@@ -15,14 +15,14 @@
 
 typedef struct KvLPair {
     unsigned long key;
-    void *val;
-} *kvl_pair_t;
+    void *        val;
+} * kvl_pair_t;
 
 typedef struct LongTable {
     unsigned long size;
     unsigned long capacity;
-    kvl_pair_t *boxes;
-} *long_table_t;
+    kvl_pair_t *  boxes;
+} * long_table_t;
 
 unsigned long hashl(unsigned long x);
 
@@ -44,4 +44,4 @@ kvl_pair_t long_table_find(long_table_t table, unsigned long key);
 
 void *long_table_remove(long_table_t table, unsigned long key);
 
-#endif // LONG_TABLE_H
+#endif  // LONG_TABLE_H
