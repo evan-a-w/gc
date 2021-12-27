@@ -97,7 +97,6 @@ find_register_roots:
 	popq	%rdi # restore rdi
 	
 
-# what is all this LOL
 	.size	find_register_roots, .-find_register_roots
 	.ident	"evan oh yeah"
 	.section	.note.GNU-stack,"",@progbits
