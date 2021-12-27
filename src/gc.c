@@ -7,7 +7,6 @@
 
 #define RESET_COLOUR(flag) ((flag) & ~3)
 #define DEFAULT_BYTES_LIMIT 256
-#define DEBUG
 
 register void **stack asm("rsp");
 void **stack_top;
@@ -16,9 +15,10 @@ void **stack_top;
 // recursively call the below function on all children
 // that are garbage collected.
 void trace(gc_state_t state, void *val) {
-    gc_node_t node = (gc_node_t)long_table_find(state->pointers,
-                                                (long)val);
-    if (node && (node->flags & NOT_SEEN)) {
+    kvl_pair_t p = (kvl_pair_t)long_table_find(state->pointers,
+                                               (unsigned long)val);
+    gc_node_t node;
+    if (p && (node = p->val) && (node->flags & NOT_SEEN)) {
         node->flags = RESET_COLOUR(node->flags);
         node->flags |= CHILDREN_UNSEEN;
 
@@ -31,10 +31,10 @@ void trace(gc_state_t state, void *val) {
 }
 
 void collect_garbage(gc_state_t state) {
-//#ifndef DEBUG
+#ifndef DEBUG
     if (state->bytes_allocated < state->bytes_limit)
         return;
-//#endif
+#endif
 
     find_roots(state);
 
@@ -159,13 +159,12 @@ void find_roots(gc_state_t state) {
     fprintf(stdout, "Stack: %p, Top: %p\n", stack, stack_top);
 #endif
     for (void **cp = stack; cp <= stack_top; cp++) {
-        gc_node_t node = (gc_node_t)long_table_find(state->pointers, (long) *cp);
-        if (node) {
+        kvl_pair_t p = (kvl_pair_t)long_table_find(state->pointers, (unsigned long) *cp);
+        if (p) {
 #ifdef DEBUG
-            fprintf(stdout, "Found %p (%p)\n", cp, *cp);
-            print_node(node);
+            fprintf(stdout, "Found %p (%p)\n", cp, (void*)p->key);
 #endif
-            add_root(state, node);
+            add_root(state, p->val);
         }
 #ifdef DEBUG
         else {
@@ -178,7 +177,7 @@ void find_roots(gc_state_t state) {
 void print_roots(gc_state_t state) {
     printf("num roots: %d\n", state->roots_size);
     for (int i = 0; i < state->roots_size; i++) {
-        printf("%p\n", state->roots[i]->val);
+        printf("\t%p\n", state->roots[i]->val);
     }
 }
 
@@ -191,7 +190,7 @@ void test(int c) {
 void *register_gc_data(gc_state_t state, void *data, int num_bytes,
                       void (*fre)(void *), void (*trac)(void *)) {
     gc_node_t node = new_node(data, num_bytes, fre, trac);
-    long_table_add(state->pointers, (long)data, node);
+    long_table_add(state->pointers, (unsigned long)data, node);
     state->bytes_allocated += num_bytes;
     collect_garbage(state);
     return data;

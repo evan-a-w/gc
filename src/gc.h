@@ -1,6 +1,8 @@
 #ifndef GC_H
 #define GC_H
 
+// #define DEBUG
+
 #include <stdlib.h>
 #include "long_table.h"
 

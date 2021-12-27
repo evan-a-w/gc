@@ -15,24 +15,26 @@ void test1__(gc_state_t state) {
                                        NULL);
     long_table_add(d1, 1, (void *)1);
 
-    gc_node_t node = long_table_find(state->pointers, (unsigned long)d1);
-    print_node(node);
-
-    fprintf(stdout, "d1 is %p (%p) - ", &d1, d1);
-    fprintf(stdout, "is %s8 byte aligned\n",
-            (unsigned long)&d1 % 8 == 0 ? "" : "not ");
-
+    // Currently breaks if these print statements dont happen - literally thats it.
+    // Either one can happen and it works.
+    // Perhaps due to placement of pointers in registers vs stack? register
+    // checking code may not properly work.
+// #ifdef DEBUG
+    fprintf(stdout, "d1 is %p (%p)\n", &d1, d1);
+// #endif
     long_table_t d2 = register_gc_data(state, long_table_new(),
                                        sizeof(struct LongTable), long_table_free,
                                        NULL);
     long_table_add(d2, 2, (void *)2);
 
-    fprintf(stdout, "d2 is %p (%p) - ", &d2, d2);
-    fprintf(stdout, "is %s8 byte aligned\n",
-            (unsigned long)&d2 % 8 == 0 ? "" : "not ");
+// #ifdef DEBUG
+    fprintf(stdout, "d2 is %p (%p)\n", &d2, d2);
+// #endif
 
     find_roots(state);
-    printf("roots size: %d\n", state->roots_size);
+#ifdef DEBUG
+    print_roots(state);
+#endif
     assert(state->roots_size == 2);
     state->roots_size = 0;
 
@@ -48,12 +50,16 @@ void test1() {
     test1__(state);
 
     find_roots(state);
+#ifdef DEBUG
     printf("roots size: %d\n", state->roots_size);
+#endif
     assert(state->roots_size == 0);
     state->roots_size = 0;
 
     collect_garbage(state);
+#ifdef DEBUG
     print_present_pointers(state);
+#endif
 
     free_gc_state(state);
 }
